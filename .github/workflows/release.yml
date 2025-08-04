@@ -120,12 +120,30 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update version.json
+        shell: python
+        run: |
+          import json
+          version = { "dfg_latest": "${{ github.event.client_payload.version }}" }
+          with open('./version.json', "w") as f:
+            json.dump(version, f, indent=2)
+
+      - name: Commit version manifest
+        continue-on-error: true
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: './version.json'
+          message: Release dfg-v${{ needs.check-version.outputs.version }}
+          tag: dfg-${{ github.event.client_payload.version }}
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
 
       - name: Move artifacts
         run: |
-          tree
           mkdir ./artifacts
           mv dfg-release-x86_64-windows/wts.exe ./artifacts/dfg-release-x86_64-windows
           mv dfg-release-arm64-android/wts ./artifacts/dfg-release-arm64-android
@@ -134,7 +152,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: dfg-${{ github.event.client_payload.version }}
-          name: dfg-v${{ github.event.client_payload.version }}
           body: |
             Release dfg v${{ github.event.client_payload.version }}.
           files: |
