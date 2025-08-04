@@ -135,8 +135,9 @@ jobs:
         continue-on-error: true
         uses: EndBug/add-and-commit@v9
         with:
+          default_author: github_actions
           add: './version.json'
-          message: Release dfg-v${{ needs.check-version.outputs.version }}
+          message: Release dfg-v${{ github.event.client_payload.version }}
           tag: dfg-${{ github.event.client_payload.version }}
 
       - name: Download artifacts
