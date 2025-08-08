@@ -58,6 +58,52 @@ jobs:
           path: ./target/x86_64-pc-windows-msvc/release/wts.exe
 
 
+  build-macos:
+    name: Build macos-arm64
+    runs-on: macos-latest
+    steps:
+      - name: Check rust version
+        run: rustup --version
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: xuxiaocheng0201/wts
+          token: '${{ secrets.GH_TOKEN }}'
+          submodules: recursive
+
+      - name: Cache target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: dfg-release-macos-v3-${{ github.run_id }}
+          restore-keys: |
+            dfg-release-macos-v3
+
+      - name: Cache otf
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./wts_cli_helper/SourceHanMono-Regular.otf
+            ./wts_cli_helper/.build.ok
+          key: wts-build-otf
+          enableCrossOsArchive: true
+
+      - name: Build release
+        run: cargo build --target aarch64-apple-darwin --release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dfg-release-arm64-macos
+          path: ./target/aarch64-apple-darwin/release/wts
+
+
   build-android:
     name: Build android-arm64
     runs-on: ubuntu-latest
@@ -113,10 +159,58 @@ jobs:
           path: ./target/aarch64-linux-android/release/wts
 
 
+  build-ios:
+    name: Build ios-arm64
+    runs-on: macos-latest
+    steps:
+      - name: Check rust version
+        run: rustup --version
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: xuxiaocheng0201/wts
+          token: '${{ secrets.GH_TOKEN }}'
+          submodules: recursive
+
+      - name: Cache target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: dfg-release-ios-v3-${{ github.run_id }}
+          restore-keys: |
+            dfg-release-ios-v3
+
+      - name: Cache otf
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./wts_cli_helper/SourceHanMono-Regular.otf
+            ./wts_cli_helper/.build.ok
+          key: wts-build-otf
+          enableCrossOsArchive: 'true'
+
+      - name: Build release
+        run: |
+          rustup target add aarch64-apple-ios
+          cargo build --target aarch64-apple-ios --release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dfg-release-arm64-ios
+          path: ./target/aarch64-apple-ios/release/wts
+
+
   create-release:
     name: Create release
     runs-on: ubuntu-latest
-    needs: [build-windows, build-android]
+    needs: [build-windows, build-macos, build-android, build-ios]
     permissions:
       contents: write
     steps:
@@ -147,7 +241,9 @@ jobs:
         run: |
           mkdir ./artifacts
           mv dfg-release-x86_64-windows/wts.exe ./artifacts/dfg-release-x86_64-windows
+          mv dfg-release-arm64-macos/wts ./artifacts/dfg-release-arm64-macos
           mv dfg-release-arm64-android/wts ./artifacts/dfg-release-arm64-android
+          mv dfg-release-arm64-ios/wts ./artifacts/dfg-release-arm64-ios
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -157,5 +253,7 @@ jobs:
             Release dfg v${{ github.event.client_payload.version }}.
           files: |
             ./artifacts/dfg-release-x86_64-windows
+            ./artifacts/dfg-release-arm64-macos
             ./artifacts/dfg-release-arm64-android
+            ./artifacts/dfg-release-arm64-ios
 
